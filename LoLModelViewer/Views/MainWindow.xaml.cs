@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls; // Added for ScrollViewer
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -149,7 +150,19 @@ namespace LoLModelViewer.Views
                     }
 
                     var loadedTextures = new Dictionary<string, BitmapSource>(StringComparer.OrdinalIgnoreCase);
-                    string[] textureFiles = Directory.GetFiles(modelDirectory, "*.tex", SearchOption.TopDirectoryOnly);
+                    // Cargar texturas del mismo directorio
+            var textureDirectory = Path.GetDirectoryName(openFileDialog.FileName);
+            var textureFiles = Directory.GetFiles(textureDirectory, "*.tex");
+
+            // Si no se encuentran texturas en el directorio del SKN, buscar en el directorio padre
+            if (textureFiles.Length == 0)
+            {
+                var parentDirectory = Directory.GetParent(textureDirectory)?.FullName;
+                if (parentDirectory != null)
+                {
+                    textureFiles = Directory.GetFiles(parentDirectory, "*.tex");
+                }
+            }
                     foreach (string texPath in textureFiles)
                     {
                         if (texPath.IndexOf("loadscreen", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -376,6 +389,13 @@ namespace LoLModelViewer.Views
             {
                 MessageBox.Show($"Failed to write to log file: {{logEx.Message}}\nOriginal Error: {message}", "Logging Error");
             }
+        }
+
+        private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            ScrollViewer scroller = (ScrollViewer)sender;
+            scroller.ScrollToVerticalOffset(scroller.VerticalOffset - e.Delta);
+            e.Handled = true; // Mark the event as handled to prevent further processing
         }
     }
 }
