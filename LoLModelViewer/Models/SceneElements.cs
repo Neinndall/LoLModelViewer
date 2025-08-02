@@ -14,28 +14,28 @@ namespace LoLModelViewer.Models
             double size = 10000; // A large size for the skybox planes
 
             // 1. Load individual textures for each side and create their materials
-            string frontTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Sky", "sky_front.dds");
+            string frontTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Sky/sky_front.dds";
             BitmapSource? frontTexture = loadTextureFunc(frontTexturePath);
             Material frontMaterial = (frontTexture != null) ? new DiffuseMaterial(new ImageBrush(frontTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
             if (frontTexture == null) logErrorFunc($"Failed to load sky_front texture from {frontTexturePath}. Using solid color fallback.");
 
-            string rightTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Sky", "sky_right.dds");
+            string rightTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Sky/sky_right.dds";
             BitmapSource? rightTexture = loadTextureFunc(rightTexturePath);
             Material rightMaterial = (rightTexture != null) ? new DiffuseMaterial(new ImageBrush(rightTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
             if (rightTexture == null) logErrorFunc($"Failed to load sky_right texture from {rightTexturePath}. Using solid color fallback.");
 
-            string backTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Sky", "sky_back.dds");
+            string backTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Sky/sky_back.dds";
             BitmapSource? backTexture = loadTextureFunc(backTexturePath);
             Material backMaterial = (backTexture != null) ? new DiffuseMaterial(new ImageBrush(backTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
             if (backTexture == null) logErrorFunc($"Failed to load sky_back texture from {backTexturePath}. Using solid color fallback.");
 
-            string leftTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Sky", "sky_left.dds");
+            string leftTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Sky/sky_left.dds";
             BitmapSource? leftTexture = loadTextureFunc(leftTexturePath);
             Material leftMaterial = (leftTexture != null) ? new DiffuseMaterial(new ImageBrush(leftTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
             if (leftTexture == null) logErrorFunc($"Failed to load sky_left texture from {leftTexturePath}. Using solid color fallback.");
 
             // Load sky_up texture
-            string skyUpTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Sky", "sky_up.dds");
+            string skyUpTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Sky/sky_up.dds";
             BitmapSource? skyUpTexture = loadTextureFunc(skyUpTexturePath);
             Material skyUpMaterial = (skyUpTexture != null) ? new DiffuseMaterial(new ImageBrush(skyUpTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.LightBlue)); // Fallback color
             if (skyUpTexture == null) logErrorFunc($"Failed to load sky_up texture from {skyUpTexturePath}. Using solid color fallback.");
@@ -127,7 +127,7 @@ namespace LoLModelViewer.Models
             };
 
             // Load the ground texture
-            string groundTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Floor", "ground_rift.dds"); // Assuming ground_rift.dds is in the app directory
+            string groundTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Floor/ground_rift.dds"; // Assuming ground_rift.dds is in the app directory
             BitmapSource? groundTexture = loadTextureFunc(groundTexturePath);
 
             Material groundMaterial;
