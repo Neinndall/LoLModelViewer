@@ -1,22 +1,22 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
-using Microsoft.Win32;
-using LeagueToolkit.Core.Mesh;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
 using LeagueToolkit.Core.Memory;
+using LeagueToolkit.Core.Mesh;
 using LeagueToolkit.Core.Renderer;
 using LeagueToolkit.Toolkit;
-using System.Windows.Media.Media3D;
-using System.Windows.Media;
+using LoLModelViewer.Models;
+using Microsoft.Win32;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using System.Windows.Media.Imaging;
-using System.Runtime.InteropServices;
-using System.Windows.Input;
-using LoLModelViewer.Models;
 
 namespace LoLModelViewer.Views
 {
@@ -118,8 +118,8 @@ namespace LoLModelViewer.Views
                         return;
                     }
 
+                    var loadedTextures = new Dictionary<string, BitmapSource>(StringComparer.OrdinalIgnoreCase);
                     string[] textureFiles = Directory.GetFiles(modelDirectory, "*.tex", SearchOption.TopDirectoryOnly);
-                    Dictionary<string, BitmapSource> loadedTextures = new Dictionary<string, BitmapSource>(StringComparer.OrdinalIgnoreCase);
                     foreach (string texPath in textureFiles)
                     {
                         if (texPath.IndexOf("loadscreen", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -151,8 +151,10 @@ namespace LoLModelViewer.Views
             _modelParts.Clear();
             partsListBox.ItemsSource = null;
 
-            LogError("---" + "Displaying Model" + "---");
+            LogError("--- Displaying Model ---");
             LogError($"Available texture keys: {string.Join(", ", loadedTextures.Keys)}");
+
+            var availableTextureNames = new ObservableCollection<string>(loadedTextures.Keys);
 
             foreach (var rangeObj in skinnedMesh.Ranges)
             {
@@ -174,76 +176,75 @@ namespace LoLModelViewer.Views
                 var texCoords = skinnedMesh.VerticesView.GetAccessor(ElementName.Texcoord0).AsVector2Array();
                 meshGeometry.TextureCoordinates = new PointCollection(texCoords.Select(uv => new System.Windows.Point(uv.X, uv.Y)));
 
-                Material material;
-                string? matchingKey = null;
+                string? initialMatchingKey = null;
 
-                if (textureName.Equals("Banner", StringComparison.OrdinalIgnoreCase))
+                // 1. Coincidencia exacta del nombre del material con el nombre de la textura (sin extensión)
+                initialMatchingKey = loadedTextures.Keys.FirstOrDefault(key => key.Equals(textureName, StringComparison.OrdinalIgnoreCase));
+
+                // 2. Coincidencia del nombre del material con el nombre de la textura + _tx_cm
+                if (initialMatchingKey == null)
                 {
-                    matchingKey = loadedTextures.Keys.FirstOrDefault(key => key.IndexOf("wings", StringComparison.OrdinalIgnoreCase) >= 0);
-                    if (matchingKey != null)
-                    {
-                        LogError($"  -> Special Case: Found texture '{matchingKey}' for Banner.");
-                    }
-                    else
-                    {
-                        LogError("  -> Special Case Error: Could not find wings texture for Banner.");
-                    }
+                    initialMatchingKey = loadedTextures.Keys.FirstOrDefault(key => key.Equals($"{textureName}_tx_cm", StringComparison.OrdinalIgnoreCase));
                 }
 
-                if (matchingKey == null)
+                // 3. Coincidencia del nombre del material como parte de la textura (ej: _material_tx_cm)
+                if (initialMatchingKey == null)
                 {
-                    matchingKey = loadedTextures.Keys.FirstOrDefault(key => key.IndexOf(textureName, StringComparison.OrdinalIgnoreCase) >= 0);
-
-                    if (matchingKey == null)
-                    {
-                        LogError($"  -> Info: No specific texture for '{textureName}'. Attempting fallback to a more specific base texture.");
-                        matchingKey = loadedTextures.Keys.FirstOrDefault(key => 
-                            key.IndexOf("_base_tx_cm", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                            key.IndexOf("sword", StringComparison.OrdinalIgnoreCase) < 0 &&
-                            key.IndexOf("wings", StringComparison.OrdinalIgnoreCase) < 0 &&
-                            key.IndexOf("banner", StringComparison.OrdinalIgnoreCase) < 0
-                        );
-
-                        if (matchingKey == null) 
-                        {
-                            LogError("  -> Info: Could not find a specific base texture. Falling back to any base texture.");
-                            matchingKey = loadedTextures.Keys.FirstOrDefault(key => key.IndexOf("_base_tx_cm", StringComparison.OrdinalIgnoreCase) >= 0);
-                        }
-                    }
+                    initialMatchingKey = loadedTextures.Keys.FirstOrDefault(key => key.IndexOf($"_{textureName}_tx_cm", StringComparison.OrdinalIgnoreCase) >= 0);
                 }
 
-                if (matchingKey != null)
+                // 4. Coincidencia de la excepción "Banner"
+                if (initialMatchingKey == null && textureName.Equals("Banner", StringComparison.OrdinalIgnoreCase))
                 {
-                    material = new DiffuseMaterial(new ImageBrush(loadedTextures[matchingKey]));
-                    LogError($"  -> Success: Applying texture '{matchingKey}' to material '{textureName}'.");
-                }
-                else
-                {
-                    material = new DiffuseMaterial(new SolidColorBrush(Colors.Magenta));
-                    LogError($"  -> Error: Could not find any texture for '{textureName}' (specific or base). Applying debug material.");
+                    initialMatchingKey = loadedTextures.Keys.FirstOrDefault(key => key.IndexOf("wings", StringComparison.OrdinalIgnoreCase) >= 0);
                 }
 
-                GeometryModel3D geometryModel = new GeometryModel3D(meshGeometry, material);
-                ModelVisual3D partVisual = new ModelVisual3D { Content = geometryModel };
+                // 5. Coincidencia de textura base específica
+                if (initialMatchingKey == null)
+                {
+                    initialMatchingKey = loadedTextures.Keys.FirstOrDefault(key => 
+                        key.IndexOf("_base_tx_cm", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        key.IndexOf("sword", StringComparison.OrdinalIgnoreCase) < 0 &&
+                        key.IndexOf("wings", StringComparison.OrdinalIgnoreCase) < 0 &&
+                        key.IndexOf("banner", StringComparison.OrdinalIgnoreCase) < 0
+                    );
+                }
+
+                // 6. Coincidencia de cualquier textura base
+                if (initialMatchingKey == null)
+                {
+                    initialMatchingKey = loadedTextures.Keys.FirstOrDefault(key => key.IndexOf("_base_tx_cm", StringComparison.OrdinalIgnoreCase) >= 0);
+                }
 
                 var modelPart = new ModelPart
                 {
                     Name = string.IsNullOrEmpty(textureName) ? "Default" : textureName,
-                    Visual = partVisual
+                    Visual = new ModelVisual3D(),
+                    AllTextures = loadedTextures,
+                    AvailableTextureNames = availableTextureNames,
+                    SelectedTextureName = initialMatchingKey
                 };
-                modelPart.PropertyChanged += ModelPart_PropertyChanged;
-                _modelParts.Add(modelPart);
 
-                modelContainer.Children.Add(partVisual);
+                if (modelPart.Visual != null)
+                {
+                    modelPart.Visual.Content = new GeometryModel3D(meshGeometry, new DiffuseMaterial(new SolidColorBrush(Colors.Magenta)));
+                    modelPart.PropertyChanged += ModelPart_PropertyChanged;
+                    _modelParts.Add(modelPart);
+                    modelContainer.Children.Add(modelPart.Visual); 
+                    modelPart.UpdateMaterial(); // Apply initial texture
+                }
             }
 
             partsListBox.ItemsSource = _modelParts;
-            LogError("---" + "Finished displaying model" + "---");
+            LogError("--- Finished displaying model ---");
         }
 
         private void ModelPart_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(ModelPart.IsVisible) && sender is ModelPart part)
+            ModelPart? part = sender as ModelPart;
+            if (part == null) return;
+
+            if (e.PropertyName == nameof(ModelPart.IsVisible))
             {
                 if (part.Visual == null) return;
 
@@ -268,15 +269,9 @@ namespace LoLModelViewer.Views
                 LogError($"Attempting to load texture from: {textureFilePath}");
                 using (FileStream fs = File.OpenRead(textureFilePath))
                 {
-                    LogError($"File stream opened for: {textureFilePath}");
-                    LeagueToolkit.Core.Renderer.Texture tex = LeagueToolkit.Core.Renderer.Texture.Load(fs);
-                    LogError("LeagueToolkit.Core.Renderer.Texture loaded.");
-
+                    Texture tex = Texture.Load(fs);
                     CommunityToolkit.HighPerformance.Memory2D<BCnEncoder.Shared.ColorRgba32> mipmap = tex.Mips[0];
-                    LogError($"Mipmap extracted. Width: {mipmap.Width}, Height: {mipmap.Height}");
-
                     Image<Rgba32> imageSharp = mipmap.ToImage();
-                    LogError("Converted to SixLabors.ImageSharp.Image<Rgba32>.");
 
                     using (MemoryStream ms = new MemoryStream())
                     {
@@ -288,7 +283,6 @@ namespace LoLModelViewer.Views
                         bitmapImage.StreamSource = ms;
                         bitmapImage.EndInit();
                         bitmapImage.Freeze();
-                        LogError("Converted to BitmapSource successfully.");
                         return bitmapImage;
                     }
                 }
