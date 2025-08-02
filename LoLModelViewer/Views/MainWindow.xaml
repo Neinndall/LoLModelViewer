@@ -71,7 +71,7 @@
         </Grid.ColumnDefinitions>
 
         <DockPanel Grid.Column="0">
-            <Button DockPanel.Dock="Top" Content="Cargar Modelo" Margin="5" Padding="5" Click="LoadModel_Click"/>
+            <Button DockPanel.Dock="Top" Content="Load SKN model" Margin="5" Padding="5" Click="LoadModel_Click"/>
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <Expander Header="Settings" Style="{StaticResource ModernExpanderStyle}" Margin="5">
