@@ -55,7 +55,7 @@ namespace LoLModelViewer.Views
         private double _rotationX = 0;
         private double _rotationY = 0;
         private double _zoom = 1.0;
-        private const double _initialCameraZ = 100.0;
+        private double _initialCameraZPosition;
         private List<ModelPart> _modelParts = new List<ModelPart>();
 
         public MainWindow()
@@ -67,6 +67,7 @@ namespace LoLModelViewer.Views
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            _initialCameraZPosition = mainCamera.Position.Z; // Store initial Z position
             modelViewport.MouseDown += modelViewport_MouseDown;
             modelViewport.MouseMove += modelViewport_MouseMove;
             modelViewport.MouseWheel += modelViewport_MouseWheel;
@@ -93,8 +94,8 @@ namespace LoLModelViewer.Views
                 double deltaX = currentMousePosition.X - _lastMousePosition.X;
                 double deltaY = currentMousePosition.Y - _lastMousePosition.Y;
 
-                _rotationY += deltaX * 0.5;
-                _rotationX -= deltaY * 0.5;
+                _rotationY += deltaX * 0.2;
+                _rotationX -= deltaY * 0.2;
 
                 UpdateCameraTransform();
                 _lastMousePosition = currentMousePosition;
@@ -115,7 +116,7 @@ namespace LoLModelViewer.Views
 
         private void modelViewport_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            _zoom += e.Delta * 0.002;
+            _zoom += e.Delta * 0.001;
             if (_zoom < 0.1) _zoom = 0.1;
             if (_zoom > 20.0) _zoom = 20.0;
             UpdateCameraTransform();
@@ -125,7 +126,7 @@ namespace LoLModelViewer.Views
         {
             ((AxisAngleRotation3D)cameraRotationX.Rotation).Angle = _rotationX;
             ((AxisAngleRotation3D)cameraRotationY.Rotation).Angle = _rotationY;
-            mainCamera.Position = new Point3D(mainCamera.Position.X, mainCamera.Position.Y, _initialCameraZ * (1 / _zoom));
+            mainCamera.Position = new Point3D(mainCamera.Position.X, mainCamera.Position.Y, _initialCameraZPosition * (1 / _zoom));
         }
 
         private void LoadModel_Click(object sender, RoutedEventArgs e)
@@ -373,7 +374,7 @@ namespace LoLModelViewer.Views
             }
             catch (Exception logEx)
             {
-                MessageBox.Show($"Failed to write to log file: {logEx.Message}", "Logging Error");
+                MessageBox.Show($"Failed to write to log file: {{logEx.Message}}\nOriginal Error: {message}", "Logging Error");
             }
         }
     }

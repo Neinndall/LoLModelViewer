@@ -13,33 +13,32 @@ namespace LoLModelViewer.Models
             Model3DGroup finalGroup = new Model3DGroup();
             double size = 10000; // A large size for the skybox planes
 
-            // 1. Load the shared texture and create the material
-            string sidesTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Sky", "sides.dds");
-            BitmapSource? sidesTexture = loadTextureFunc(sidesTexturePath);
-            Material sidesMaterial;
-            if (sidesTexture != null)
-            {
-                sidesMaterial = new DiffuseMaterial(new ImageBrush(sidesTexture));
-            }
-            else
-            {
-                sidesMaterial = new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
-                logErrorFunc($"Failed to load sides texture from {sidesTexturePath}. Using solid color fallback.");
-            }
+            // 1. Load individual textures for each side and create their materials
+            string frontTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Sky", "sky_front.dds");
+            BitmapSource? frontTexture = loadTextureFunc(frontTexturePath);
+            Material frontMaterial = (frontTexture != null) ? new DiffuseMaterial(new ImageBrush(frontTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
+            if (frontTexture == null) logErrorFunc($"Failed to load sky_front texture from {frontTexturePath}. Using solid color fallback.");
+
+            string rightTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Sky", "sky_right.dds");
+            BitmapSource? rightTexture = loadTextureFunc(rightTexturePath);
+            Material rightMaterial = (rightTexture != null) ? new DiffuseMaterial(new ImageBrush(rightTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
+            if (rightTexture == null) logErrorFunc($"Failed to load sky_right texture from {rightTexturePath}. Using solid color fallback.");
+
+            string backTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Sky", "sky_back.dds");
+            BitmapSource? backTexture = loadTextureFunc(backTexturePath);
+            Material backMaterial = (backTexture != null) ? new DiffuseMaterial(new ImageBrush(backTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
+            if (backTexture == null) logErrorFunc($"Failed to load sky_back texture from {backTexturePath}. Using solid color fallback.");
+
+            string leftTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Sky", "sky_left.dds");
+            BitmapSource? leftTexture = loadTextureFunc(leftTexturePath);
+            Material leftMaterial = (leftTexture != null) ? new DiffuseMaterial(new ImageBrush(leftTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
+            if (leftTexture == null) logErrorFunc($"Failed to load sky_left texture from {leftTexturePath}. Using solid color fallback.");
 
             // Load sky_up texture
             string skyUpTexturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Sky", "sky_up.dds");
             BitmapSource? skyUpTexture = loadTextureFunc(skyUpTexturePath);
-            Material skyUpMaterial;
-            if (skyUpTexture != null)
-            {
-                skyUpMaterial = new DiffuseMaterial(new ImageBrush(skyUpTexture));
-            }
-            else
-            {
-                skyUpMaterial = new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.LightBlue)); // Fallback color
-                logErrorFunc($"Failed to load sky_up texture from {skyUpTexturePath}. Using solid color fallback.");
-            }
+            Material skyUpMaterial = (skyUpTexture != null) ? new DiffuseMaterial(new ImageBrush(skyUpTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.LightBlue)); // Fallback color
+            if (skyUpTexture == null) logErrorFunc($"Failed to load sky_up texture from {skyUpTexturePath}. Using solid color fallback.");
 
             // 2. Create a single, canonical plane geometry. By default, its front face points towards +Z.
             var planeMesh = new MeshGeometry3D
@@ -61,23 +60,16 @@ namespace LoLModelViewer.Models
                 }
             };
 
-            var planeModel = new GeometryModel3D(planeMesh, sidesMaterial);
-
-            // Create a plane model for the top with its specific material
-            var topPlaneModel = new GeometryModel3D(planeMesh, skyUpMaterial);
-
-            // 4. Create, transform, and add each plane to the group
-
             // Back Plane (at z=size, needs to face origin at -Z)
             var backTransform = new Transform3DGroup();
             backTransform.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 180)));
             backTransform.Children.Add(new TranslateTransform3D(new Vector3D(0, 0, size)));
-            var backPlane = planeModel.Clone();
+            var backPlane = new GeometryModel3D(planeMesh, backMaterial);
             backPlane.Transform = backTransform;
             finalGroup.Children.Add(backPlane);
 
             // Front Plane (at z=-size, needs to face origin at +Z)
-            var frontPlane = planeModel.Clone();
+            var frontPlane = new GeometryModel3D(planeMesh, frontMaterial);
             frontPlane.Transform = new TranslateTransform3D(0, 0, -size);
             finalGroup.Children.Add(frontPlane);
 
@@ -85,7 +77,7 @@ namespace LoLModelViewer.Models
             var leftTransform = new Transform3DGroup();
             leftTransform.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 90)));
             leftTransform.Children.Add(new TranslateTransform3D(new Vector3D(-size, 0, 0)));
-            var leftPlane = planeModel.Clone();
+            var leftPlane = new GeometryModel3D(planeMesh, leftMaterial);
             leftPlane.Transform = leftTransform;
             finalGroup.Children.Add(leftPlane);
 
@@ -93,7 +85,7 @@ namespace LoLModelViewer.Models
             var rightTransform = new Transform3DGroup();
             rightTransform.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), -90)));
             rightTransform.Children.Add(new TranslateTransform3D(new Vector3D(size, 0, 0)));
-            var rightPlane = planeModel.Clone();
+            var rightPlane = new GeometryModel3D(planeMesh, rightMaterial);
             rightPlane.Transform = rightTransform;
             finalGroup.Children.Add(rightPlane);
 
@@ -101,7 +93,7 @@ namespace LoLModelViewer.Models
             var topTransform = new Transform3DGroup();
             topTransform.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(1, 0, 0), 90))); // Rotate to face down
             topTransform.Children.Add(new TranslateTransform3D(new Vector3D(0, size, 0))); // Move to top
-            var topPlane = topPlaneModel.Clone();
+            var topPlane = new GeometryModel3D(planeMesh, skyUpMaterial);
             topPlane.Transform = topTransform;
             finalGroup.Children.Add(topPlane);
 
