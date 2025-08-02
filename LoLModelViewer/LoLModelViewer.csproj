@@ -12,4 +12,19 @@
     <PackageReference Include="LeagueToolkit" Version="4.0.0-beta.52" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Resources\Floor\ground_rift.dds">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Sky\sides.dds">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Sky\sky_up.dds">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Sky\sky_down.dds">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
