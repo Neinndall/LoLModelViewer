@@ -5,11 +5,12 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls; // Added for ScrollViewer
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
+using System.Reflection;
+using System.Diagnostics;
 using LeagueToolkit.Core.Memory;
 using LeagueToolkit.Core.Mesh;
 using LeagueToolkit.Core.Renderer;
@@ -19,6 +20,8 @@ using static LoLModelViewer.Models.SceneElements;
 using Microsoft.Win32;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using LoLModelViewer.Services;
+using LoLModelViewer.Info;
 
 namespace LoLModelViewer.Views
 {
@@ -41,6 +44,14 @@ namespace LoLModelViewer.Views
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        public string AppVersion
+        {
+            get
+            {
+                return LoLModelViewer.Info.AssemblyInfo.Version;
+            }
+        }
+
         protected virtual void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -55,7 +66,6 @@ namespace LoLModelViewer.Views
         private System.Windows.Point _lastPanPosition;
         private double _rotationX = 0;
         private double _rotationY = 0;
-        private double _zoom = 1.0;
         private double _initialCameraZPosition;
         private List<ModelPart> _modelParts = new List<ModelPart>();
 
@@ -73,6 +83,7 @@ namespace LoLModelViewer.Views
             modelViewport.MouseMove += modelViewport_MouseMove;
             modelViewport.MouseWheel += modelViewport_MouseWheel;
             UpdateCameraTransform();
+            this.Title = $"LoL Model Viewer {AppVersion}";
         }
 
         private void modelViewport_MouseDown(object sender, MouseButtonEventArgs e)
@@ -117,17 +128,17 @@ namespace LoLModelViewer.Views
 
         private void modelViewport_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            _zoom += e.Delta * 0.001;
-            if (_zoom < 0.1) _zoom = 0.1;
-            if (_zoom > 20.0) _zoom = 20.0;
-            UpdateCameraTransform();
+            Vector3D lookDirection = mainCamera.LookDirection;
+            double moveAmount = e.Delta * 0.1; // Puedes ajustar este valor para cambiar la sensibilidad del zoom
+
+            Point3D newPosition = mainCamera.Position + (lookDirection * moveAmount);
+            mainCamera.Position = newPosition;
         }
 
         private void UpdateCameraTransform()
         {
             ((AxisAngleRotation3D)cameraRotationX.Rotation).Angle = _rotationX;
             ((AxisAngleRotation3D)cameraRotationY.Rotation).Angle = _rotationY;
-            mainCamera.Position = new Point3D(mainCamera.Position.X, mainCamera.Position.Y, _initialCameraZPosition * (1 / _zoom));
         }
 
         private void LoadModel_Click(object sender, RoutedEventArgs e)
@@ -144,25 +155,13 @@ namespace LoLModelViewer.Views
 
                     if (string.IsNullOrEmpty(modelDirectory))
                     {
-                        LogError("Could not determine the model directory.");
+                        LogService.LogError("Could not determine the model directory.");
                         MessageBox.Show("Could not determine the model directory.", "Error");
                         return;
                     }
 
                     var loadedTextures = new Dictionary<string, BitmapSource>(StringComparer.OrdinalIgnoreCase);
-                    // Cargar texturas del mismo directorio
-            var textureDirectory = Path.GetDirectoryName(openFileDialog.FileName);
-            var textureFiles = Directory.GetFiles(textureDirectory, "*.tex");
-
-            // Si no se encuentran texturas en el directorio del SKN, buscar en el directorio padre
-            if (textureFiles.Length == 0)
-            {
-                var parentDirectory = Directory.GetParent(textureDirectory)?.FullName;
-                if (parentDirectory != null)
-                {
-                    textureFiles = Directory.GetFiles(parentDirectory, "*.tex");
-                }
-            }
+                    string[] textureFiles = Directory.GetFiles(modelDirectory, "*.tex", SearchOption.TopDirectoryOnly);
                     foreach (string texPath in textureFiles)
                     {
                         if (texPath.IndexOf("loadscreen", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -182,7 +181,7 @@ namespace LoLModelViewer.Views
                 }
                 catch (Exception ex)
                 {
-                    LogError($"Failed to load model: {ex.Message}\n{ex.StackTrace}");
+                    LogService.LogError($"Failed to load model: {ex.Message}\n{ex.StackTrace}");
                     MessageBox.Show("Failed to load model. Details logged to app.log", "Error");
                 }
             }
@@ -194,15 +193,15 @@ namespace LoLModelViewer.Views
             _modelParts.Clear();
             partsListBox.ItemsSource = null;
 
-            LogError("--- Displaying Model ---");
-            LogError($"Available texture keys: {string.Join(", ", loadedTextures.Keys)}");
+            LogService.LogError("--- Displaying Model ---");
+            LogService.LogError($"Available texture keys: {string.Join(", ", loadedTextures.Keys)}");
 
             var availableTextureNames = new ObservableCollection<string>(loadedTextures.Keys);
 
             foreach (var rangeObj in skinnedMesh.Ranges)
             {
                 string textureName = rangeObj.Material.TrimEnd('\0');
-                LogError($"Submesh material name: '{textureName}'");
+                LogService.LogError($"Submesh material name: '{textureName}'");
 
                 MeshGeometry3D meshGeometry = new MeshGeometry3D();
 
@@ -280,47 +279,61 @@ namespace LoLModelViewer.Views
 
             partsListBox.ItemsSource = _modelParts;
             textureAssignmentListBox.ItemsSource = _modelParts;
-            modelContainer.Children.Add(SceneElements.CreateGroundPlane(LoadTexture, LogError)); // Add the ground plane
-            modelContainer.Children.Add(CreateSidePlanes(LoadTexture, LogError)); // Add the side planes
+            modelContainer.Children.Add(SceneElements.CreateGroundPlane(LoadTexture, LogService.LogError)); // Add the ground plane
+            modelContainer.Children.Add(CreateSidePlanes(LoadTexture, LogService.LogError)); // Add the side planes
             
-            LogError("--- Finished displaying model ---");
+            LogService.LogError("--- Finished displaying model ---");
         }
-
-        
 
         private BitmapSource? LoadTexture(string textureFilePath)
         {
             try
             {
-                LogError($"Attempting to load texture from: {textureFilePath}");
+                LogService.LogError($"Attempting to load texture from: {textureFilePath}");
                 string extension = Path.GetExtension(textureFilePath);
 
                 if (extension.Equals(".tex", StringComparison.OrdinalIgnoreCase) || extension.Equals(".dds", StringComparison.OrdinalIgnoreCase))
                 {
-                    using (FileStream fs = File.OpenRead(textureFilePath))
+                    Stream? resourceStream = null;
+                    if (textureFilePath.StartsWith("pack://application:"))
                     {
-                        Texture? tex = Texture.Load(fs);
+                        Uri resourceUri = new Uri(textureFilePath);
+                        resourceStream = Application.GetResourceStream(resourceUri)?.Stream;
+                        if (resourceStream == null)
+                        {
+                            LogService.LogError($"Failed to get resource stream for: {textureFilePath}");
+                            return null;
+                        }
+                    }
+                    else
+                    {
+                        resourceStream = File.OpenRead(textureFilePath);
+                    }
+
+                    using (resourceStream)
+                    {
+                        Texture? tex = Texture.Load(resourceStream);
                         if (tex == null)
                         {
-                            LogError($"Failed to load texture object from {textureFilePath}. Texture.Load returned null.");
+                            LogService.LogError($"Failed to load texture object from {textureFilePath}. Texture.Load returned null.");
                             return null;
                         }
                         // Ensure Mips is not null before accessing Count
                         if (tex.Mips == null)
                         {
-                            LogError($"No Mips collection found for texture: {textureFilePath}");
+                            LogService.LogError($"No Mips collection found for texture: {textureFilePath}");
                             return null;
                         }
-                        LogError($"Texture.Load successful for {textureFilePath}. Mipmap count: {tex.Mips.Length.ToString()}");
+                        LogService.LogError($"Texture.Load successful for {textureFilePath}. Mipmap count: {tex.Mips.Length.ToString()}");
                         if (tex.Mips.Length == 0)
                         {
-                            LogError($"No mipmaps found for texture: {textureFilePath}");
+                            LogService.LogError($"No mipmaps found for texture: {textureFilePath}");
                             return null;
                         }
                         CommunityToolkit.HighPerformance.Memory2D<BCnEncoder.Shared.ColorRgba32> mipmap = tex.Mips[0];
-                        LogError($"Attempting to convert mipmap to ImageSharp for {textureFilePath}");
+                        LogService.LogError($"Attempting to convert mipmap to ImageSharp for {textureFilePath}");
                         Image<Rgba32> imageSharp = mipmap.ToImage();
-                        LogError($"ImageSharp conversion successful for {textureFilePath}");
+                        LogService.LogError($"ImageSharp conversion successful for {textureFilePath}");
 
                         using (MemoryStream ms = new MemoryStream())
                         {
@@ -349,7 +362,7 @@ namespace LoLModelViewer.Views
             }
             catch (Exception ex)
             {
-                LogError($"Failed to load texture: {ex.Message}\n{ex.StackTrace}");
+                LogService.LogError($"Failed to load texture: {ex.Message}\n{ex.StackTrace}");
                 MessageBox.Show("Failed to load texture. Details logged to app.log", "Error");
                 return null;
             }
@@ -376,26 +389,6 @@ namespace LoLModelViewer.Views
                     modelContainer.Children.Remove(part.Visual);
                 }
             }
-        }
-
-        private void LogError(string message)
-        {
-            try
-            {
-                string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.log");
-                File.AppendAllText(logFilePath, $"[{DateTime.Now}] {message}\n");
-            }
-            catch (Exception logEx)
-            {
-                MessageBox.Show($"Failed to write to log file: {{logEx.Message}}\nOriginal Error: {message}", "Logging Error");
-            }
-        }
-
-        private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            ScrollViewer scroller = (ScrollViewer)sender;
-            scroller.ScrollToVerticalOffset(scroller.VerticalOffset - e.Delta);
-            e.Handled = true; // Mark the event as handled to prevent further processing
         }
     }
 }
