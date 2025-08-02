@@ -72,7 +72,7 @@
 
         <DockPanel Grid.Column="0">
             <Button DockPanel.Dock="Top" Content="Load SKN model" Margin="5" Padding="5" Click="LoadModel_Click"/>
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
                 <StackPanel>
                     <Expander Header="Settings" Style="{StaticResource ModernExpanderStyle}" Margin="5">
                         <StackPanel Margin="10">

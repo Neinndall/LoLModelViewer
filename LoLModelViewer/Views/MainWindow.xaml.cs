@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
+using System.Windows.Controls; // Added for ScrollViewer
 using System.Reflection;
 using System.Diagnostics;
 using LeagueToolkit.Core.Memory;
@@ -235,23 +236,6 @@ namespace LoLModelViewer.Views
                     initialMatchingKey = loadedTextures.Keys.FirstOrDefault(key => key.IndexOf($"_{textureName}_tx_cm", StringComparison.OrdinalIgnoreCase) >= 0);
                 }
 
-                // 4. Coincidencia de la excepción "Banner"
-                if (initialMatchingKey == null && textureName.Equals("Banner", StringComparison.OrdinalIgnoreCase))
-                {
-                    initialMatchingKey = loadedTextures.Keys.FirstOrDefault(key => key.IndexOf("wings", StringComparison.OrdinalIgnoreCase) >= 0);
-                }
-
-                // 5. Coincidencia de textura base específica
-                if (initialMatchingKey == null)
-                {
-                    initialMatchingKey = loadedTextures.Keys.FirstOrDefault(key => 
-                        key.IndexOf("_base_tx_cm", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                        key.IndexOf("sword", StringComparison.OrdinalIgnoreCase) < 0 &&
-                        key.IndexOf("wings", StringComparison.OrdinalIgnoreCase) < 0 &&
-                        key.IndexOf("banner", StringComparison.OrdinalIgnoreCase) < 0
-                    );
-                }
-
                 // 6. Coincidencia de cualquier textura base
                 if (initialMatchingKey == null)
                 {
@@ -389,6 +373,13 @@ namespace LoLModelViewer.Views
                     modelContainer.Children.Remove(part.Visual);
                 }
             }
+        }
+        
+        private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            ScrollViewer scroller = (ScrollViewer)sender;
+            scroller.ScrollToVerticalOffset(scroller.VerticalOffset - e.Delta);
+            e.Handled = true; // Mark the event as handled to prevent further processing
         }
     }
 }
