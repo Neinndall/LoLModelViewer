@@ -14,14 +14,42 @@ using LeagueToolkit.Core.Mesh;
 using LeagueToolkit.Core.Renderer;
 using LeagueToolkit.Toolkit;
 using LoLModelViewer.Models;
+using static LoLModelViewer.Models.SceneElements;
 using Microsoft.Win32;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace LoLModelViewer.Views
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, INotifyPropertyChanged
     {
+        private double _ambientBrightness = 1.0;
+        public double AmbientBrightness
+        {
+            get { return _ambientBrightness; }
+            set
+            {
+                if (_ambientBrightness != value)
+                {
+                    _ambientBrightness = value;
+                    OnPropertyChanged(nameof(AmbientBrightness));
+                    UpdateAmbientLight();
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        private void UpdateAmbientLight()
+        {
+            byte brightness = (byte)(_ambientBrightness * 255);
+            ambientLight.Color = System.Windows.Media.Color.FromRgb(brightness, brightness, brightness);
+        }
         private System.Windows.Point _lastMousePosition;
         private System.Windows.Point _lastPanPosition;
         private double _rotationX = 0;
@@ -33,6 +61,7 @@ namespace LoLModelViewer.Views
         public MainWindow()
         {
             InitializeComponent();
+            this.DataContext = this;
             this.Loaded += Window_Loaded;
         }
 
@@ -227,7 +256,7 @@ namespace LoLModelViewer.Views
 
                 if (modelPart.Visual != null)
                 {
-                    modelPart.Visual.Content = new GeometryModel3D(meshGeometry, new DiffuseMaterial(new SolidColorBrush(Colors.Magenta)));
+                    modelPart.Visual.Content = new GeometryModel3D(meshGeometry, new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Magenta)));
                     modelPart.PropertyChanged += ModelPart_PropertyChanged;
                     _modelParts.Add(modelPart);
                     modelContainer.Children.Add(modelPart.Visual); 
@@ -237,7 +266,79 @@ namespace LoLModelViewer.Views
 
             partsListBox.ItemsSource = _modelParts;
             textureAssignmentListBox.ItemsSource = _modelParts;
+            modelContainer.Children.Add(SceneElements.CreateGroundPlane(LoadTexture, LogError)); // Add the ground plane
+            modelContainer.Children.Add(CreateSidePlanes(LoadTexture, LogError)); // Add the side planes
+            
             LogError("--- Finished displaying model ---");
+        }
+
+        
+
+        private BitmapSource? LoadTexture(string textureFilePath)
+        {
+            try
+            {
+                LogError($"Attempting to load texture from: {textureFilePath}");
+                string extension = Path.GetExtension(textureFilePath);
+
+                if (extension.Equals(".tex", StringComparison.OrdinalIgnoreCase) || extension.Equals(".dds", StringComparison.OrdinalIgnoreCase))
+                {
+                    using (FileStream fs = File.OpenRead(textureFilePath))
+                    {
+                        Texture? tex = Texture.Load(fs);
+                        if (tex == null)
+                        {
+                            LogError($"Failed to load texture object from {textureFilePath}. Texture.Load returned null.");
+                            return null;
+                        }
+                        // Ensure Mips is not null before accessing Count
+                        if (tex.Mips == null)
+                        {
+                            LogError($"No Mips collection found for texture: {textureFilePath}");
+                            return null;
+                        }
+                        LogError($"Texture.Load successful for {textureFilePath}. Mipmap count: {tex.Mips.Length.ToString()}");
+                        if (tex.Mips.Length == 0)
+                        {
+                            LogError($"No mipmaps found for texture: {textureFilePath}");
+                            return null;
+                        }
+                        CommunityToolkit.HighPerformance.Memory2D<BCnEncoder.Shared.ColorRgba32> mipmap = tex.Mips[0];
+                        LogError($"Attempting to convert mipmap to ImageSharp for {textureFilePath}");
+                        Image<Rgba32> imageSharp = mipmap.ToImage();
+                        LogError($"ImageSharp conversion successful for {textureFilePath}");
+
+                        using (MemoryStream ms = new MemoryStream())
+                        {
+                            imageSharp.SaveAsPng(ms);
+                            ms.Position = 0;
+                            BitmapImage bitmapImage = new BitmapImage();
+                            bitmapImage.BeginInit();
+                            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                            bitmapImage.StreamSource = ms;
+                            bitmapImage.EndInit();
+                            bitmapImage.Freeze();
+                            return bitmapImage;
+                        }
+                    }
+                }
+                else // Assume it's a standard image format (png, jpg, etc.)
+                {
+                    BitmapImage bitmapImage = new BitmapImage();
+                    bitmapImage.BeginInit();
+                    bitmapImage.UriSource = new Uri(textureFilePath, UriKind.Absolute);
+                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmapImage.EndInit();
+                    bitmapImage.Freeze();
+                    return bitmapImage;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"Failed to load texture: {ex.Message}\n{ex.StackTrace}");
+                MessageBox.Show("Failed to load texture. Details logged to app.log", "Error");
+                return null;
+            }
         }
 
         private void ModelPart_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -260,39 +361,6 @@ namespace LoLModelViewer.Views
                 {
                     modelContainer.Children.Remove(part.Visual);
                 }
-            }
-        }
-
-        private BitmapSource? LoadTexture(string textureFilePath)
-        {
-            try
-            {
-                LogError($"Attempting to load texture from: {textureFilePath}");
-                using (FileStream fs = File.OpenRead(textureFilePath))
-                {
-                    Texture tex = Texture.Load(fs);
-                    CommunityToolkit.HighPerformance.Memory2D<BCnEncoder.Shared.ColorRgba32> mipmap = tex.Mips[0];
-                    Image<Rgba32> imageSharp = mipmap.ToImage();
-
-                    using (MemoryStream ms = new MemoryStream())
-                    {
-                        imageSharp.SaveAsPng(ms);
-                        ms.Position = 0;
-                        BitmapImage bitmapImage = new BitmapImage();
-                        bitmapImage.BeginInit();
-                        bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                        bitmapImage.StreamSource = ms;
-                        bitmapImage.EndInit();
-                        bitmapImage.Freeze();
-                        return bitmapImage;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogError($"Failed to load texture: {ex.Message}\n{ex.StackTrace}");
-                MessageBox.Show("Failed to load texture. Details logged to app.log", "Error");
-                return null;
             }
         }
 

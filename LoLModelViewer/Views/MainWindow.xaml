@@ -73,7 +73,14 @@
         <DockPanel Grid.Column="0">
             <Button DockPanel.Dock="Top" Content="Cargar Modelo" Margin="5" Padding="5" Click="LoadModel_Click"/>
             <StackPanel>
-                <Expander Header="Partes del Modelo" Margin="5" IsExpanded="True" Style="{StaticResource ModernExpanderStyle}">
+                <Expander Header="Settings" Style="{StaticResource ModernExpanderStyle}" Margin="5">
+                <StackPanel Margin="10">
+                    <TextBlock Text="Ambient Brightness"/>
+                    <Slider Minimum="0" Maximum="1" Value="{Binding AmbientBrightness, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}" SmallChange="0.05" LargeChange="0.1" />
+                </StackPanel>
+            </Expander>
+
+            <Expander Header="Model Parts" Style="{StaticResource ModernExpanderStyle}" IsExpanded="True" Margin="5">
                     <ListBox x:Name="partsListBox" SelectionMode="Single" Background="Transparent" BorderThickness="0">
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:ModelPart}">
@@ -95,8 +102,7 @@
                                         <TextBlock Text="{Binding Name}" Margin="5,0,0,0" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <ComboBox ItemsSource="{Binding AvailableTextureNames}" 
-                                              SelectedItem="{Binding SelectedTextureName, Mode=TwoWay}"
-                                              Margin="20,5,0,0" MaxWidth="180">
+                                              SelectedItem="{Binding SelectedTextureName, Mode=TwoWay}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
                                                 <TextBlock Text="{Binding}"/>
@@ -133,12 +139,12 @@
                     </PerspectiveCamera>
                 </Viewport3D.Camera>
                 <Viewport3D.Children>
-                    <ModelVisual3D x:Name="modelContainer">
-                        <!-- El modelo 3D cargado se insertará aquí -->
-                    </ModelVisual3D>
+                                        <ModelVisual3D x:Name="modelContainer" />
                     <ModelVisual3D>
                         <ModelVisual3D.Content>
-                            <DirectionalLight Direction="-0.6,-0.5,-0.7" Color="White"/>
+                            <Model3DGroup>
+                                <AmbientLight x:Name="ambientLight" Color="White" />
+                            </Model3DGroup>
                         </ModelVisual3D.Content>
                     </ModelVisual3D>
                 </Viewport3D.Children>
