@@ -236,6 +236,7 @@ namespace LoLModelViewer.Views
             }
 
             partsListBox.ItemsSource = _modelParts;
+            textureAssignmentListBox.ItemsSource = _modelParts;
             LogError("--- Finished displaying model ---");
         }
 

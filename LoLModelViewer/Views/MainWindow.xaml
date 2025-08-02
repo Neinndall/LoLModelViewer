@@ -77,9 +77,21 @@
                     <ListBox x:Name="partsListBox" SelectionMode="Single" Background="Transparent" BorderThickness="0">
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:ModelPart}">
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox IsChecked="{Binding IsVisible, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Name}" Margin="5,0,0,0" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Expander>
+
+                <Expander Header="Texturas" Margin="5" IsExpanded="True" Style="{StaticResource ModernExpanderStyle}">
+                    <ListBox x:Name="textureAssignmentListBox" SelectionMode="Single" Background="Transparent" BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:ModelPart}">
                                 <StackPanel Margin="0,2">
                                     <StackPanel Orientation="Horizontal">
-                                        <CheckBox IsChecked="{Binding IsVisible, Mode=TwoWay}" VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding Name}" Margin="5,0,0,0" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <ComboBox ItemsSource="{Binding AvailableTextureNames}" 
