@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using Microsoft.Win32;
 using LeagueToolkit.Core.Mesh; // Correct namespace for SkinnedMesh
@@ -16,9 +19,27 @@ using System.Windows.Input; // For Mouse events
 
 namespace LoLModelViewer
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
+    public class ModelPart : INotifyPropertyChanged
+    {
+        public string Name { get; set; }
+        private bool _isVisible = true;
+        public bool IsVisible
+        {
+            get { return _isVisible; }
+            set
+            {
+                if (_isVisible != value)
+                {
+                    _isVisible = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsVisible)));
+                }
+            }
+        }
+        public ModelVisual3D Visual { get; set; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+    }
+
     public partial class MainWindow : Window
     {
         private System.Windows.Point _lastMousePosition;
@@ -27,6 +48,7 @@ namespace LoLModelViewer
         private double _rotationY = 0;
         private double _zoom = 1.0;
         private const double _initialCameraZ = 100.0; // Initial Z position of the camera
+        private List<ModelPart> _modelParts = new List<ModelPart>();
 
         public MainWindow()
         {
@@ -155,22 +177,20 @@ namespace LoLModelViewer
 
         private void DisplayModel(SkinnedMesh skinnedMesh, Dictionary<string, BitmapSource> loadedTextures)
         {
-            modelContainer.Content = null;
-            Model3DGroup modelGroup = new Model3DGroup();
+            modelContainer.Children.Clear();
+            _modelParts.Clear();
+            partsListBox.ItemsSource = null;
 
-            // Pre-registrar las claves de textura para depuración
             LogError("--- Displaying Model ---");
             LogError($"Available texture keys: {string.Join(", ", loadedTextures.Keys)}");
 
             foreach (var rangeObj in skinnedMesh.Ranges)
             {
-                // Obtener el nombre de la textura desde la propiedad Material de la submalla
                 string textureName = rangeObj.Material.TrimEnd('\0');
                 LogError($"Submesh material name: '{textureName}'");
 
                 MeshGeometry3D meshGeometry = new MeshGeometry3D();
 
-                // Extraer datos de la malla (Vértices, Índices, Coordenadas UV)
                 var positions = skinnedMesh.VerticesView.GetAccessor(ElementName.Position).AsVector3Array();
                 meshGeometry.Positions = new Point3DCollection(positions.Select(p => new Point3D(p.X, p.Y, p.Z)));
 
@@ -182,14 +202,11 @@ namespace LoLModelViewer
                 meshGeometry.TriangleIndices = triangleIndices;
 
                 var texCoords = skinnedMesh.VerticesView.GetAccessor(ElementName.Texcoord0).AsVector2Array();
-                // DEBUG: No invertir la coordenada Y para ver el mapeo original
                 meshGeometry.TextureCoordinates = new PointCollection(texCoords.Select(uv => new System.Windows.Point(uv.X, uv.Y)));
 
-                // Lógica de asignación de textura con excepción para 'Banner' de Aatrox
                 Material material;
                 string matchingKey = null;
 
-                // Excepción específica para 'Banner' de Aatrox
                 if (textureName.Equals("Banner", StringComparison.OrdinalIgnoreCase))
                 {
                     matchingKey = loadedTextures.Keys.FirstOrDefault(key => key.IndexOf("wings", StringComparison.OrdinalIgnoreCase) >= 0);
@@ -203,16 +220,13 @@ namespace LoLModelViewer
                     }
                 }
 
-                // Lógica general de asignación (si no se manejó por la excepción o si la excepción falló)
                 if (matchingKey == null)
                 {
                     matchingKey = loadedTextures.Keys.FirstOrDefault(key => key.IndexOf(textureName, StringComparison.OrdinalIgnoreCase) >= 0);
 
-                    // Si no se encuentra una coincidencia específica, intentar la textura base como fallback
                     if (matchingKey == null)
                     {
                         LogError($"  -> Info: No specific texture for '{textureName}'. Attempting fallback to a more specific base texture.");
-                        // Priorizar la textura que es "base" pero no de otras partes específicas como "sword"
                         matchingKey = loadedTextures.Keys.FirstOrDefault(key => 
                             key.IndexOf("_base_tx_cm", StringComparison.OrdinalIgnoreCase) >= 0 &&
                             key.IndexOf("sword", StringComparison.OrdinalIgnoreCase) < 0 &&
@@ -220,7 +234,6 @@ namespace LoLModelViewer
                             key.IndexOf("banner", StringComparison.OrdinalIgnoreCase) < 0
                         );
 
-                        // Si sigue sin encontrar, coge cualquier textura base como último recurso
                         if (matchingKey == null) {
                             LogError("  -> Info: Could not find a specific base texture. Falling back to any base texture.");
                             matchingKey = loadedTextures.Keys.FirstOrDefault(key => key.IndexOf("_base_tx_cm", StringComparison.OrdinalIgnoreCase) >= 0);
@@ -235,16 +248,45 @@ namespace LoLModelViewer
                 }
                 else
                 {
-                    material = new DiffuseMaterial(new SolidColorBrush(Colors.Magenta)); // Color para errores no resueltos
+                    material = new DiffuseMaterial(new SolidColorBrush(Colors.Magenta));
                     LogError($"  -> Error: Could not find any texture for '{textureName}' (specific or base). Applying debug material.");
                 }
 
                 GeometryModel3D geometryModel = new GeometryModel3D(meshGeometry, material);
-                modelGroup.Children.Add(geometryModel);
+                ModelVisual3D partVisual = new ModelVisual3D { Content = geometryModel };
+
+                var modelPart = new ModelPart
+                {
+                    Name = string.IsNullOrEmpty(textureName) ? "Default" : textureName,
+                    Visual = partVisual
+                };
+                modelPart.PropertyChanged += ModelPart_PropertyChanged;
+                _modelParts.Add(modelPart);
+
+                modelContainer.Children.Add(partVisual);
             }
 
-            modelContainer.Content = modelGroup;
+            partsListBox.ItemsSource = _modelParts;
             LogError("--- Finished displaying model ---");
+        }
+
+        private void ModelPart_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ModelPart.IsVisible))
+            {
+                var part = (ModelPart)sender;
+                if (part.IsVisible)
+                {
+                    if (!modelContainer.Children.Contains(part.Visual))
+                    {
+                        modelContainer.Children.Add(part.Visual);
+                    }
+                }
+                else
+                {
+                    modelContainer.Children.Remove(part.Visual);
+                }
+            }
         }
 
         private BitmapSource LoadTexture(string textureFilePath)
@@ -258,15 +300,12 @@ namespace LoLModelViewer
                     LeagueToolkit.Core.Renderer.Texture tex = LeagueToolkit.Core.Renderer.Texture.Load(fs);
                     LogError($"LeagueToolkit.Core.Renderer.Texture loaded.");
 
-                    // Get the first mipmap (highest resolution)
                     CommunityToolkit.HighPerformance.Memory2D<BCnEncoder.Shared.ColorRgba32> mipmap = tex.Mips[0];
                     LogError($"Mipmap extracted. Width: {mipmap.Width}, Height: {mipmap.Height}");
 
-                    // Convert to SixLabors.ImageSharp.Image<Rgba32>
                     Image<Rgba32> imageSharp = mipmap.ToImage();
                     LogError($"Converted to SixLabors.ImageSharp.Image<Rgba32>.");
 
-                    // Convert SixLabors.ImageSharp.Image<Rgba32> to BitmapSource
                     using (MemoryStream ms = new MemoryStream())
                     {
                         imageSharp.SaveAsPng(ms);
@@ -276,7 +315,7 @@ namespace LoLModelViewer
                         bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
                         bitmapImage.StreamSource = ms;
                         bitmapImage.EndInit();
-                        bitmapImage.Freeze(); // Freeze for cross-thread access if needed
+                        bitmapImage.Freeze();
                         LogError($"Converted to BitmapSource successfully.");
                         return bitmapImage;
                     }

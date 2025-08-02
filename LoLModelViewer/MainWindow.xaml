@@ -6,9 +6,86 @@
         xmlns:local="clr-namespace:LoLModelViewer"
         mc:Ignorable="d"
         Title="MainWindow" Height="768" Width="1024">
-    <DockPanel>
-        <Button DockPanel.Dock="Top" Content="Cargar Modelo" Margin="5" Padding="5" Click="LoadModel_Click"/>
-        <Border x:Name="modelViewport" Background="LightGray" Margin="5">
+    <Window.Resources>
+        <Style x:Key="ModernExpanderStyle" TargetType="Expander">
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Expander">
+                        <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="3" SnapsToDevicePixels="True">
+                            <DockPanel>
+                                <ToggleButton x:Name="HeaderSite"
+                                              DockPanel.Dock="Top"
+                                              Content="{TemplateBinding Header}"
+                                              IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                              FontWeight="SemiBold"
+                                              Foreground="#FF333333"
+                                              FocusVisualStyle="{x:Null}"
+                                              Padding="5,3">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Grid Background="Transparent">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Path x:Name="Arrow" Grid.Column="0" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#FF666666" Margin="5,0,5,0" VerticalAlignment="Center"/>
+                                                <ContentPresenter Grid.Column="1" RecognizesAccessKey="True" SnapsToDevicePixels="True" VerticalAlignment="Center"/>
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsChecked" Value="True">
+                                                    <Setter TargetName="Arrow" Property="Data" Value="M 0 4 L 4 0 L 8 4 Z"/>
+                                                </Trigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Foreground" Value="Black"/>
+                                                    <Setter TargetName="Arrow" Property="Fill" Value="Black"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                                <ContentPresenter x:Name="ExpandSite"
+                                                  DockPanel.Dock="Bottom"
+                                                  Focusable="false"
+                                                  Visibility="Collapsed"
+                                                  Margin="20,5,0,0"/>
+                            </DockPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="True">
+                                <Setter TargetName="ExpandSite" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <DockPanel Grid.Column="0">
+            <Button DockPanel.Dock="Top" Content="Cargar Modelo" Margin="5" Padding="5" Click="LoadModel_Click"/>
+            <Expander Header="Partes del Modelo" Margin="5" IsExpanded="True" Style="{StaticResource ModernExpanderStyle}">
+                <ListBox x:Name="partsListBox" SelectionMode="Extended" Background="Transparent" BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox IsChecked="{Binding IsVisible, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Name}" Margin="5,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Expander>
+        </DockPanel>
+
+        <Border x:Name="modelViewport" Background="LightGray" Margin="5" Grid.Column="1">
             <Viewport3D>
                 <Viewport3D.Camera>
                     <PerspectiveCamera x:Name="mainCamera" Position="0,0,100" LookDirection="0,0,-1" UpDirection="0,1,0" FieldOfView="60">
@@ -41,5 +118,5 @@
                 </Viewport3D.Children>
             </Viewport3D>
         </Border>
-    </DockPanel>
+    </Grid>
 </Window>
