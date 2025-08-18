@@ -11,18 +11,23 @@ namespace LoLModelViewer;
 /// </summary>
 public partial class App : Application
 {
-    public App()
+    protected override void OnStartup(StartupEventArgs e)
     {
-        this.Startup += App_Startup;
-    }
+        base.OnStartup(e);
 
-    private void App_Startup(object sender, StartupEventArgs e)
-    {
-        // Catch exceptions from all threads in the AppDomain.
         AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-
-        // Catch exceptions from the UI Dispatcher thread.
         this.DispatcherUnhandledException += App_DispatcherUnhandledException;
+
+        try
+        {
+            var mainWindow = new LoLModelViewer.Views.MainWindow();
+            mainWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"An error occurred during startup: {ex.ToString()}", "Startup Error");
+            Shutdown();
+        }
     }
 
     private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -43,7 +48,7 @@ public partial class App : Application
         try
         {
             string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.log");
-            File.AppendAllText(logFilePath, string.Format("[{0}] Unhandled Exception ({1}): {2}\n{3}\n", DateTime.Now, source, ex.Message, ex.StackTrace));
+            File.AppendAllText(logFilePath, string.Format("[{0}] Unhandled Exception ({1}): {2}\n{3}", DateTime.Now, source, ex.Message, ex.StackTrace));
         }
         catch (Exception logEx)
         {

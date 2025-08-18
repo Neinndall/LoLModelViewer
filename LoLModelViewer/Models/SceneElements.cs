@@ -16,28 +16,28 @@ namespace LoLModelViewer.Models
             // 1. Load individual textures for each side and create their materials
             string frontTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Sky/sky_front.dds";
             BitmapSource? frontTexture = loadTextureFunc(frontTexturePath);
-            Material frontMaterial = (frontTexture != null) ? new DiffuseMaterial(new ImageBrush(frontTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
+            System.Windows.Media.Media3D.Material frontMaterial = (frontTexture != null) ? new System.Windows.Media.Media3D.DiffuseMaterial(new ImageBrush(frontTexture)) : new System.Windows.Media.Media3D.DiffuseMaterial(new SolidColorBrush(Colors.Gray));
             if (frontTexture == null) logErrorFunc($"Failed to load sky_front texture from {frontTexturePath}. Using solid color fallback.");
 
             string rightTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Sky/sky_right.dds";
             BitmapSource? rightTexture = loadTextureFunc(rightTexturePath);
-            Material rightMaterial = (rightTexture != null) ? new DiffuseMaterial(new ImageBrush(rightTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
+            System.Windows.Media.Media3D.Material rightMaterial = (rightTexture != null) ? new System.Windows.Media.Media3D.DiffuseMaterial(new ImageBrush(rightTexture)) : new System.Windows.Media.Media3D.DiffuseMaterial(new SolidColorBrush(Colors.Gray));
             if (rightTexture == null) logErrorFunc($"Failed to load sky_right texture from {rightTexturePath}. Using solid color fallback.");
 
             string backTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Sky/sky_back.dds";
             BitmapSource? backTexture = loadTextureFunc(backTexturePath);
-            Material backMaterial = (backTexture != null) ? new DiffuseMaterial(new ImageBrush(backTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
+            System.Windows.Media.Media3D.Material backMaterial = (backTexture != null) ? new System.Windows.Media.Media3D.DiffuseMaterial(new ImageBrush(backTexture)) : new System.Windows.Media.Media3D.DiffuseMaterial(new SolidColorBrush(Colors.Gray));
             if (backTexture == null) logErrorFunc($"Failed to load sky_back texture from {backTexturePath}. Using solid color fallback.");
 
             string leftTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Sky/sky_left.dds";
             BitmapSource? leftTexture = loadTextureFunc(leftTexturePath);
-            Material leftMaterial = (leftTexture != null) ? new DiffuseMaterial(new ImageBrush(leftTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.Gray));
+            System.Windows.Media.Media3D.Material leftMaterial = (leftTexture != null) ? new System.Windows.Media.Media3D.DiffuseMaterial(new ImageBrush(leftTexture)) : new System.Windows.Media.Media3D.DiffuseMaterial(new SolidColorBrush(Colors.Gray));
             if (leftTexture == null) logErrorFunc($"Failed to load sky_left texture from {leftTexturePath}. Using solid color fallback.");
 
             // Load sky_up texture
             string skyUpTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Sky/sky_up.dds";
             BitmapSource? skyUpTexture = loadTextureFunc(skyUpTexturePath);
-            Material skyUpMaterial = (skyUpTexture != null) ? new DiffuseMaterial(new ImageBrush(skyUpTexture)) : new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Colors.LightBlue)); // Fallback color
+            System.Windows.Media.Media3D.Material skyUpMaterial = (skyUpTexture != null) ? new System.Windows.Media.Media3D.DiffuseMaterial(new ImageBrush(skyUpTexture)) : new System.Windows.Media.Media3D.DiffuseMaterial(new SolidColorBrush(Colors.LightBlue)); // Fallback color
             if (skyUpTexture == null) logErrorFunc($"Failed to load sky_up texture from {skyUpTexturePath}. Using solid color fallback.");
 
             // 2. Create a single, canonical plane geometry. By default, its front face points towards +Z.
@@ -130,15 +130,15 @@ namespace LoLModelViewer.Models
             string groundTexturePath = "pack://application:,,,/LoLModelViewer;component/Resources/Floor/ground_rift.dds"; // Assuming ground_rift.dds is in the app directory
             BitmapSource? groundTexture = loadTextureFunc(groundTexturePath);
 
-            Material groundMaterial;
+            System.Windows.Media.Media3D.Material groundMaterial;
             if (groundTexture != null)
             {
-                groundMaterial = new DiffuseMaterial(new ImageBrush(groundTexture));
+                groundMaterial = new System.Windows.Media.Media3D.DiffuseMaterial(new ImageBrush(groundTexture));
             }
             else
             {
                 // Fallback to a solid color if texture loading fails
-                groundMaterial = new DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 120, 80))); // Earthy color
+                groundMaterial = new System.Windows.Media.Media3D.DiffuseMaterial(new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 120, 80))); // Earthy color
                 logErrorFunc($"Failed to load ground texture from {groundTexturePath}. Using solid color fallback.");
             }
 

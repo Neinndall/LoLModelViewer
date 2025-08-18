@@ -5,84 +5,55 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LoLModelViewer.Views"
         xmlns:models="clr-namespace:LoLModelViewer.Models"
+        xmlns:viewmodels="clr-namespace:LoLModelViewer.ViewModels"
+        xmlns:converters="clr-namespace:LoLModelViewer.Views.Converters"
+        xmlns:controls="clr-namespace:LoLModelViewer.Controls"
+        xmlns:materialIcons="clr-namespace:Material.Icons.WPF;assembly=Material.Icons.WPF"
         mc:Ignorable="d"
-        Title="LoL Model Viewer" Height="768" Width="1024">
-    <Window.Resources>
-        <Style x:Key="ModernExpanderStyle" TargetType="Expander">
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Expander">
-                        <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="3" SnapsToDevicePixels="True">
-                            <DockPanel>
-                                <ToggleButton x:Name="HeaderSite"
-                                              DockPanel.Dock="Top"
-                                              Content="{TemplateBinding Header}"
-                                              IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
-                                              FontWeight="SemiBold"
-                                              Foreground="#FF333333"
-                                              FocusVisualStyle="{x:Null}"
-                                              Padding="5,3">
-                                    <ToggleButton.Template>
-                                        <ControlTemplate TargetType="ToggleButton">
-                                            <Grid Background="Transparent">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Path x:Name="Arrow" Grid.Column="0" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#FF666666" Margin="5,0,5,0" VerticalAlignment="Center"/>
-                                                <ContentPresenter Grid.Column="1" RecognizesAccessKey="True" SnapsToDevicePixels="True" VerticalAlignment="Center"/>
-                                            </Grid>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsChecked" Value="True">
-                                                    <Setter TargetName="Arrow" Property="Data" Value="M 0 4 L 4 0 L 8 4 Z"/>
-                                                </Trigger>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Foreground" Value="Black"/>
-                                                    <Setter TargetName="Arrow" Property="Fill" Value="Black"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </ToggleButton.Template>
-                                </ToggleButton>
-                                <ContentPresenter x:Name="ExpandSite"
-                                                  DockPanel.Dock="Bottom"
-                                                  Focusable="false"
-                                                  Visibility="Collapsed"
-                                                  Margin="10,5,0,0"/>
-                            </DockPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsExpanded" Value="True">
-                                <Setter TargetName="ExpandSite" Property="Visibility" Value="Visible"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
+        Title="LoLModelViewer" Height="768" Width="1024">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250"/>
+            <ColumnDefinition x:Name="ControlPanelColumn" Width="250"/>
+            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <DockPanel Grid.Column="0">
-            <Button DockPanel.Dock="Top" Content="Load SKN model" Margin="5" Padding="5" Click="LoadModel_Click"/>
-            <ScrollViewer VerticalScrollBarVisibility="Auto" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
+        <DockPanel x:Name="ControlPanel" Grid.Column="0">
+            <Button DockPanel.Dock="Top" Content="Load SKN model" Margin="5" Padding="5" Command="{Binding LoadModelCommand}"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <Expander Header="Settings" Style="{StaticResource ModernExpanderStyle}" Margin="5">
                         <StackPanel Margin="10">
                             <TextBlock Text="Ambient Brightness"/>
-                            <Slider Minimum="0" Maximum="1" Value="{Binding AmbientBrightness, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}" SmallChange="0.05" LargeChange="0.1" />
+                            <Slider Minimum="0" Maximum="1" Value="{Binding ElementName=CameraView, Path=AmbientBrightness, Mode=TwoWay}" SmallChange="0.05" LargeChange="0.1" />
+                            <TextBlock Text="Sun Position X" Margin="0,10,0,0"/>
+                            <Slider Minimum="-500" Maximum="500" Value="{Binding ElementName=CameraView, Path=SunX, Mode=TwoWay}" />
+                            <TextBlock Text="Sun Position Y"/>
+                            <Slider Minimum="0" Maximum="500" Value="{Binding ElementName=CameraView, Path=SunY, Mode=TwoWay}" />
+                            <TextBlock Text="Sun Position Z"/>
+                            <Slider Minimum="-500" Maximum="500" Value="{Binding ElementName=CameraView, Path=SunZ, Mode=TwoWay}" />
                         </StackPanel>
                     </Expander>
 
+                    <Expander Header="Loaded Models" Style="{StaticResource ModernExpanderStyle}" IsExpanded="True" Margin="5">
+                        <ListBox ItemsSource="{Binding SceneModels}" SelectedItem="{Binding SelectedModel}" SelectionMode="Single" Background="Transparent" BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type models:SceneModel}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Name}" Grid.Column="0" VerticalAlignment="Center"/>
+                                        <Button Content="X" Grid.Column="1" Command="{Binding DataContext.RemoveModelCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}" Padding="5,2"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Expander>
+
                     <Expander Header="Model Parts" Style="{StaticResource ModernExpanderStyle}" IsExpanded="True" Margin="5">
-                        <ListBox x:Name="partsListBox" SelectionMode="Single" Background="Transparent" BorderThickness="0">
+                        <ListBox ItemsSource="{Binding ModelParts}" SelectionMode="Single" Background="Transparent" BorderThickness="0">
                             <ListBox.ItemTemplate>
                                 <DataTemplate DataType="{x:Type models:ModelPart}">
                                     <StackPanel Orientation="Horizontal">
@@ -95,7 +66,7 @@
                     </Expander>
 
                     <Expander Header="Texturas" Margin="5" IsExpanded="True" Style="{StaticResource ModernExpanderStyle}">
-                        <ListBox x:Name="textureAssignmentListBox" ItemsSource="{Binding ModelPartsViewModel.ModelParts}" SelectionMode="Single" Background="Transparent" BorderThickness="0">
+                        <ListBox ItemsSource="{Binding ModelParts}" SelectionMode="Single" Background="Transparent" BorderThickness="0">
                             <ListBox.ItemTemplate>
                                 <DataTemplate DataType="{x:Type models:ModelPart}">
                                     <StackPanel Margin="0,2">
@@ -119,38 +90,14 @@
             </ScrollViewer>
         </DockPanel>
 
-        <Border x:Name="modelViewport" Background="LightGray" Margin="5" Grid.Column="1">
-            <Viewport3D>
-                <Viewport3D.Camera>
-                    <PerspectiveCamera x:Name="mainCamera" Position="0,300,400" LookDirection="0,-0.4,-1" UpDirection="0,1,0" FieldOfView="60">
-                        <PerspectiveCamera.Transform>
-                            <Transform3DGroup x:Name="cameraTransformGroup">
-                                <RotateTransform3D x:Name="cameraRotationX">
-                                    <RotateTransform3D.Rotation>
-                                        <AxisAngleRotation3D Axis="1,0,0" Angle="0"/>
-                                    </RotateTransform3D.Rotation>
-                                </RotateTransform3D>
-                                <RotateTransform3D x:Name="cameraRotationY">
-                                    <RotateTransform3D.Rotation>
-                                        <AxisAngleRotation3D Axis="0,1,0" Angle="0"/>
-                                    </RotateTransform3D.Rotation>
-                                </RotateTransform3D>
-                                <TranslateTransform3D x:Name="cameraTranslation"/>
-                            </Transform3DGroup>
-                        </PerspectiveCamera.Transform>
-                    </PerspectiveCamera>
-                </Viewport3D.Camera>
-                <Viewport3D.Children>
-                                        <ModelVisual3D x:Name="modelContainer" />
-                    <ModelVisual3D>
-                        <ModelVisual3D.Content>
-                            <Model3DGroup>
-                                <AmbientLight x:Name="ambientLight" Color="White" />
-                            </Model3DGroup>
-                        </ModelVisual3D.Content>
-                    </ModelVisual3D>
-                </Viewport3D.Children>
-            </Viewport3D>
-        </Border>
+        <GridSplitter x:Name="MainGridSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="LightGray" ShowsPreview="True"/>
+
+        <Button Grid.Column="1" x:Name="TogglePanelButton" Click="TogglePanel_Click" 
+                HorizontalAlignment="Center" VerticalAlignment="Center" 
+                Width="20" Height="40" Background="Transparent" BorderBrush="Transparent">
+            <materialIcons:MaterialIcon x:Name="TogglePanelIcon" Kind="ChevronLeft" />
+        </Button>
+
+        <controls:CameraControl x:Name="CameraView" Grid.Column="2" ModelVisuals="{Binding ModelVisuals}" SelectedModel="{Binding SelectedModel}"/>
     </Grid>
 </Window>
